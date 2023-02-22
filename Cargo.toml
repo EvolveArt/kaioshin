@@ -22,8 +22,6 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 scale-info = { version = "2.1.1", default-features = false, features = [
   "derive",
 ] }
-starknet-crypto = { git = "https://github.com/abdelhamidbakhta/starknet-rs", branch = "feature/manual-no-std-bigdecimal", default-features = false }
-starknet-ff = { git = "https://github.com/abdelhamidbakhta/starknet-rs", branch = "feature/manual-no-std-bigdecimal", default-features = false }
 hex = {version = "0.4.3", default-features = false}
 
 # Substrate Frame
@@ -35,6 +33,9 @@ sp-std = { default-features = false, git = "https://github.com/paritytech/substr
 sp-io = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.37" }
 
-
 # Kaioshin primtitives
 kp-starknet = { version = "0.1.0-dev", path = "primitives/starknet", default-features = false }
+
+# Starknet related dependencies
+starknet-crypto = { git = "https://github.com/tdelabro/starknet-rs.git", branch = "feature/manual-no-std-bigdecimal", default-features = false }
+starknet-ff = { git = "https://github.com/tdelabro/starknet-rs.git", branch = "feature/manual-no-std-bigdecimal", default-features = false }
