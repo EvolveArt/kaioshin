@@ -1,3 +1,4 @@
+/*
 use starknet_crypto::FieldElement;
 
 /// The Pedersen hash function.
@@ -7,3 +8,4 @@ use starknet_crypto::FieldElement;
 pub fn hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
 	starknet_crypto::pedersen_hash(x, y)
 }
+ */

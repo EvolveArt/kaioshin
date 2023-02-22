@@ -1,15 +1,19 @@
-use starknet_crypto::FieldElement;
-use starknet_ff::FromByteSliceError;
+//! This module contains the hash functions used in the StarkNet protocol.
+//use starknet_crypto::FieldElement;
+//use starknet_ff::FromByteSliceError;
 
 mod pedersen;
 mod poseidon;
 
 /// The type of hash function used in the StarkNet protocol.
 pub enum HashType {
+	/// The Poseidon hash function.
 	Poseidon,
+	/// The Pedersen hash function.
 	Pedersen,
 }
 
+/*
 /// Hashes two field elements using the specified hash function.
 /// ### Arguments
 /// * `hash_type`: The type of hash function to use.
@@ -40,3 +44,4 @@ pub fn hash_bytes(hash_type: HashType, x: &[u8], y: &[u8]) -> Result<[u8; 32], F
 	// Return the hash as a byte array.
 	Ok(hash.to_bytes_be())
 }
+ */

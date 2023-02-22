@@ -3141,6 +3141,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "kp-starknet",
  "pallet-aura",
  "pallet-balances",
  "pallet-cairo",
@@ -3180,12 +3181,22 @@ dependencies = [
 name = "kp-starknet"
 version = "0.1.0-dev"
 dependencies = [
+ "either",
  "frame-support",
- "hex",
+ "hash256-std-hasher",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "paste",
+ "rand 0.8.5",
+ "scale-info",
+ "serde",
+ "serde_json",
  "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
- "starknet-crypto 0.2.0 (git+https://github.com/abdelhamidbakhta/starknet-rs?branch=feature/manual-no-std-bigdecimal)",
- "starknet-ff 0.2.0 (git+https://github.com/abdelhamidbakhta/starknet-rs?branch=feature/manual-no-std-bigdecimal)",
+ "zstd",
 ]
 
 [[package]]
