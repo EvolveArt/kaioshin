@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["RawOrigin"],"type":["ContractAddress","ContractClassHash"]};
+window.SIDEBAR_ITEMS = {"enum":["OffchainWorkerError","RawOrigin"],"struct":["EthBlockNumber","EthLogs","Message","NumberRes"],"type":["ContractStorageKeyWrapper","NonceWrapper","StarkFeltWrapper","StorageKey"]};
