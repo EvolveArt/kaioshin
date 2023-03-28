@@ -4,6 +4,7 @@
   "license": "MIT",
   "description": "Benchmarking of Madara.",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "test:chain": "artillery run -e local ./scripts/chain.yml",
     "test:execution": "artillery run -e local ./scripts/cairo-execution.yml --output reports/report.json",
@@ -16,16 +17,17 @@
     "test:wait": "wait-on tcp:9944 && yarn test",
     "test:ci": "concurrently 'yarn chain:dev' '../scripts/test.sh'",
     "build": "yarn generate:defs && yarn generate:meta",
-    "generate:defs": "ts-node --skip-project node_modules/.bin/polkadot-types-from-defs --package sample-polkadotjs-typegen/interfaces --input ./src/interfaces --endpoint ws://localhost:9944",
-    "generate:meta": "ts-node --skip-project node_modules/.bin/polkadot-types-from-chain --package sample-polkadotjs-typegen/interfaces --endpoint ws://localhost:9944 --output ./src/interfaces",
-    "lint": "tsc --noEmit --pretty"
+    "generate:defs": "ts-node --skip-project node_modules/.bin/polkadot-types-from-defs --package madara-benchmarking/interfaces --input ./src/interfaces --endpoint ws://localhost:9944",
+    "generate:meta": "ts-node --skip-project node_modules/.bin/polkadot-types-from-chain --package madara-benchmarking/interfaces --endpoint ws://localhost:9944 --output ./src/interfaces",
+    "lint": "tsc --noEmit --pretty",
+    "script:erc20": "ts-node-esm ./src/index.ts"
   },
   "keywords": [
     "madara",
     "benchmark"
   ],
   "devDependencies": {
-    "@polkadot/keyring": "9.5.1",
+    "@polkadot/keyring": "^8.13.1",
     "@polkadot/typegen": "8.13.1",
     "artillery": "^2.0.0-30",
     "artillery-engine-substrate": "^1.0.6-2",

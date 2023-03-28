@@ -3,7 +3,7 @@
     // this is specific with augmented overrides
     "paths": {
       // this is the package name we use (in the interface imports, --package for generators)
-      "sample-polkadotjs-typegen/*": ["src/*"],
+      "madara-benchmarking/*": ["src/*"],
       // here we replace the @polkadot/api augmentation with our own, generated from chain
       "@polkadot/api/augment": ["src/interfaces/augment-api.ts"],
       // replace the augmented types with our own, as generated from definitions
