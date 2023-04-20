@@ -298,7 +298,7 @@ export async function transfer(
 
   const extrisinc_transfer = api.tx.starknet.invoke(tx_transfer);
 
-  await sendTransaction(api, extrisinc_transfer, user);
+  await sendTransactionNoValidation(api, extrisinc_transfer, user);
 
   return "";
 }
