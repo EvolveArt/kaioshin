@@ -17,15 +17,19 @@ async function main() {
   }
 
   const avgExtrinsicsPerBlock = totalExtrinsics / 10;
+  const avgTps = avgExtrinsicsPerBlock * 50 / 6;
 
   // Save avgExtrinsicsPerBlock to file reports/metrics.json
   fs.writeFileSync(
     "reports/metrics.json",
-    JSON.stringify({ avgExtrinsicsPerBlock })
+    JSON.stringify({ avgExtrinsicsPerBlock, avgTps })
   );
 
   console.log(
     `Average extrinsics per block in the last 10 blocks: ${avgExtrinsicsPerBlock}`
+  );
+  console.log(
+    `Average TPS: ${avgTps}`
   );
 }
 
