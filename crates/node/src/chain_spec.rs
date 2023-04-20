@@ -1,3 +1,5 @@
+use core::str::FromStr;
+
 use blockifier::test_utils::{get_contract_class, ACCOUNT_CONTRACT_PATH};
 use hex::FromHex;
 use madara_runtime::{
@@ -10,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::storage::Storage;
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{sr25519, Pair, Public, H256, U256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_state_machine::BasicExternalities;
 
@@ -231,7 +233,13 @@ fn testnet_genesis(
                 (other_class_hash_bytes, ContractClassWrapper::from(test_class)),
                 (token_class_hash_bytes, ContractClassWrapper::from(erc20_class)),
             ],
-            storage: vec![],
+            storage: vec![(
+                (
+                    <[u8; 32]>::from_hex("040e59c2c182a58fb0a74349bfa4769cbbcba32547591dd3fb1def8623997d00").unwrap(),
+                    H256::from_str("0x02a2c49c4dba0d91b34f2ade85d41d09561f9a77884c15ba2ab0f2241b080deb").unwrap(),
+                ),
+                U256::from(1000000000000000000u128),
+            )],
             fee_token_address,
             _phantom: Default::default(),
         },
