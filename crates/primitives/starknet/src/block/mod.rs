@@ -1,7 +1,6 @@
 //! StarkNet block primitives.
 
 mod header;
-use alloc::vec::Vec;
 
 use frame_support::BoundedVec;
 pub use header::*;
@@ -57,8 +56,6 @@ impl Default for BlockTransactions {
 pub struct Block {
     /// The block header.
     header: Header,
-    /// The block transactions.
-    transactions: BlockTransactions,
 }
 
 impl Block {
@@ -67,27 +64,12 @@ impl Block {
     /// # Arguments
     ///
     /// * `header` - The block header.
-    /// * `transactions` - The block transactions.
-    pub fn new(header: Header, transactions: BlockTransactions) -> Self {
-        Self { header, transactions }
+    pub fn new(header: Header) -> Self {
+        Self { header }
     }
 
     /// Return a reference to the block header
     pub fn header(&self) -> &Header {
         &self.header
-    }
-
-    /// Return a reference to all transactions
-    pub fn transactions(&self) -> &BlockTransactions {
-        &self.transactions
-    }
-
-    /// Return a reference to all transaction hashes
-    pub fn transactions_hashes(&self) -> Vec<H256> {
-        match &self.transactions {
-            BlockTransactions::Full(transactions) => transactions.into_iter().map(|tx| tx.hash).collect(),
-
-            BlockTransactions::Hashes(hashes) => hashes.to_vec(),
-        }
     }
 }

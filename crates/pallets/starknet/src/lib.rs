@@ -108,7 +108,7 @@ pub mod pallet {
     use frame_support::traits::{OriginTrait, Time};
     use frame_system::pallet_prelude::*;
     use mp_digest_log::{PostLog, MADARA_ENGINE_ID};
-    use mp_starknet::block::{Block as StarknetBlock, BlockTransactions, Header as StarknetHeader, MaxTransactions};
+    use mp_starknet::block::{Block as StarknetBlock, Header as StarknetHeader, MaxTransactions};
     use mp_starknet::crypto::commitment;
     use mp_starknet::crypto::hash::pedersen::PedersenHasher;
     use mp_starknet::execution::{
@@ -423,9 +423,9 @@ pub mod pallet {
             let receipt;
             match call_info {
                 Ok(Some(mut v)) => {
-                    let events = Self::emit_events(&mut v).map_err(|_| Error::<T>::EmitEventError)?;
+                    Self::emit_events(&mut v).map_err(|_| Error::<T>::EmitEventError)?;
                     receipt = TransactionReceiptWrapper {
-                        events: BoundedVec::try_from(events).unwrap(),
+                        events: BoundedVec::try_from(vec![]).unwrap(),
                         transaction_hash: transaction.hash,
                         tx_type: TxType::InvokeTx,
                         actual_fee: U256::zero(), // TODO: switch to actual fee (#251)
@@ -763,22 +763,19 @@ pub mod pallet {
             let protocol_version = None;
             let extra_data = None;
 
-            let block = StarknetBlock::new(
-                StarknetHeader::new(
-                    parent_block_hash,
-                    block_number,
-                    global_state_root,
-                    sequencer_address,
-                    block_timestamp,
-                    transaction_count,
-                    transaction_commitment,
-                    events.len() as u128,
-                    event_commitment,
-                    protocol_version,
-                    extra_data,
-                ),
-                BlockTransactions::Full(BoundedVec::try_from(transactions).unwrap()),
-            );
+            let block = StarknetBlock::new(StarknetHeader::new(
+                parent_block_hash,
+                block_number,
+                global_state_root,
+                sequencer_address,
+                block_timestamp,
+                transaction_count,
+                transaction_commitment,
+                events.len() as u128,
+                event_commitment,
+                protocol_version,
+                extra_data,
+            ));
             // Save the current block.
             CurrentBlock::<T>::put(block.clone());
             // Save the block number <> hash mapping.
@@ -841,24 +838,13 @@ pub mod pallet {
         ///
         /// The result of the operation.
         #[inline(always)]
-        fn emit_events(call_info: &mut CallInfo) -> Result<Vec<StarknetEventType>, EventError> {
-            let mut events = Vec::new();
-
-            call_info.execution.events.sort_by_key(|ordered_event| ordered_event.order);
-            for ordered_event in &call_info.execution.events {
-                let event_type = Self::emit_event(&ordered_event.event, call_info.call.storage_address)?;
-                events.push(event_type);
-            }
-
-            for inner_call in &mut call_info.inner_calls {
+        fn emit_events(call_info: &mut CallInfo) -> Result<(), EventError> {
+            call_info.inner_calls.iter_mut().try_for_each(|inner_call: &mut CallInfo| {
                 inner_call.execution.events.sort_by_key(|ordered_event| ordered_event.order);
-                for ordered_event in &inner_call.execution.events {
-                    let event_type = Self::emit_event(&ordered_event.event, inner_call.call.storage_address)?;
-                    events.push(event_type);
-                }
-            }
-
-            Ok(events)
+                inner_call.execution.events.iter().try_for_each(|ordered_event| {
+                    Self::emit_event(&ordered_event.event, inner_call.call.storage_address)
+                })
+            })
         }
 
         /// Emit an event from the call info in substrate.
@@ -872,16 +858,17 @@ pub mod pallet {
         ///
         /// Returns an error if the event construction fails.
         #[inline(always)]
-        fn emit_event(event: &EventContent, from_address: ContractAddress) -> Result<StarknetEventType, EventError> {
+        fn emit_event(event: &EventContent, from_address: ContractAddress) -> Result<(), EventError> {
             log!(debug, "Transaction event: {:?}", event);
             let sn_event = StarknetEventType::builder()
                 .with_event_content(event.clone())
                 .with_from_address(from_address)
                 .build()?;
-            Self::deposit_event(Event::StarknetEvent(sn_event.clone()));
 
             PendingEvents::<T>::try_append(sn_event.clone()).map_err(|_| EventError::TooManyEvents)?;
-            Ok(sn_event)
+            Self::deposit_event(Event::StarknetEvent(sn_event));
+
+            Ok(())
         }
 
         /// Apply the state diff returned by the starknet execution.

@@ -36,4 +36,4 @@ scenarios:
       - loop:
         - function: "executeERC20Transfer"
         - log: "Executed ERC20 transfer by {{ accountName }}"
-        count: 5000
+        count: 200
