@@ -5,6 +5,7 @@ members = [
   "crates/runtime",
   "crates/pallets/starknet/runtime_api/",
   "crates/pallets/starknet",
+  "crates/pallets/autonomous",
   "crates/primitives/genesis-config/",
   "crates/primitives/digest-log",
   "crates/primitives/snos-output",
@@ -39,6 +40,7 @@ default-members = [
   "crates/runtime",
   "crates/pallets/starknet/runtime_api/",
   "crates/pallets/starknet",
+  "crates/pallets/autonomous",
   "crates/primitives/genesis-config/",
   "crates/primitives/digest-log",
   "crates/primitives/transactions",
@@ -162,6 +164,8 @@ pallet-timestamp = { default-features = false, git = "https://github.com/parityt
 # Madara pallets
 pallet-starknet = { path = "crates/pallets/starknet", default-features = false }
 pallet-starknet-runtime-api = { path = "crates/pallets/starknet/runtime_api", default-features = false }
+pallet-autonomous = { path = "crates/pallets/autonomous", default-features = false }
+
 # Madara primtitives
 mp-genesis-config = { path = "crates/primitives/genesis-config", default-features = false }
 mp-digest-log = { path = "crates/primitives/digest-log", default-features = false }
