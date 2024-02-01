@@ -33,7 +33,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::large_enum_variant)]
 
-/// Starknet pallet.
+/// Autonomous pallet.
 /// Definition of the pallet's runtime storage items, events, errors, and dispatchable
 /// functions.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
@@ -41,13 +41,20 @@
 #[cfg(test)]
 mod tests;
 
+/// The pallet's runtime custom types.
+pub mod types;
+
 pub use pallet::*;
+
+use crate::types::{Job, Policy};
 
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::derive_impl;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use frame_system::RawOrigin;
+    use mp_transactions::{InvokeTransaction, InvokeTransactionV1};
 
     use super::*;
 
@@ -69,11 +76,38 @@ pub mod pallet {
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
+    #[pallet::storage]
+    #[pallet::unbounded]
+    #[pallet::getter(fn job_by_id)]
+    pub(super) type Jobs<T: Config> = StorageMap<_, Identity, u128, Job, OptionQuery>;
+
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         /// If we have some spare time left, the `on_idle` hook will trigger the jobs
         /// that need/can be triggered.
+        /// Read the jobs that need to be triggered from the storage.
+        /// Then it selects which ones to trigger based on the policy defined in the config.
+        /// Finally we execute the jobs and update the storage accordingly.
         fn on_idle(_: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
+            let sequencer_address = pallet_starknet::Pallet::<T>::sequencer_address();
+            let nonce = pallet_starknet::Pallet::<T>::nonce(sequencer_address);
+
+            let transaction = InvokeTransaction::V1(InvokeTransactionV1 {
+                max_fee: 1e18 as u128,
+                signature: Default::default(),
+                nonce: nonce.into(),
+                sender_address: sequencer_address.into(),
+                calldata: Vec::new(),
+                offset_version: false,
+            });
+
+            match pallet_starknet::Pallet::<T>::invoke(RawOrigin::None.into(), transaction) {
+                Ok(_) => {}
+                Err(e) => {
+                    log::error!("Error triggering job: {:?}", e);
+                }
+            }
+
             Weight::default()
         }
     }
