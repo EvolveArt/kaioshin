@@ -50,6 +50,7 @@ frame-system-benchmarking = { workspace = true, optional = true }
 # Madara Local Dependencies
 # Madara Pallets
 pallet-starknet = { workspace = true }
+pallet-autonomous = { workspace = true }
 pallet-starknet-runtime-api = { workspace = true }
 
 # Madara Primitives
@@ -74,6 +75,7 @@ substrate-wasm-builder = { workspace = true }
 std = [
   # Madara pallets
   "pallet-starknet/std",
+  "pallet-autonomous/std",
   # Frame dependencies
   "frame-try-runtime?/std",
   "frame-system-benchmarking?/std",
@@ -129,4 +131,5 @@ runtime-benchmarks = [
   "sp-runtime/runtime-benchmarks",
   # Madara pallets
   "pallet-starknet/runtime-benchmarks",
+  "pallet-autonomous/runtime-benchmarks",
 ]

@@ -52,7 +52,7 @@ use crate::types::{Job, Policy, UserJob};
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::derive_impl;
-    use frame_support::pallet_prelude::{ValueQuery, *};
+    use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use frame_system::RawOrigin;
     use mp_transactions::{InvokeTransaction, InvokeTransactionV1, UserTransaction};

@@ -6157,6 +6157,7 @@ dependencies = [
  "mp-simulations",
  "mp-transactions",
  "pallet-aura",
+ "pallet-autonomous",
  "pallet-grandpa",
  "pallet-starknet",
  "pallet-starknet-runtime-api",
