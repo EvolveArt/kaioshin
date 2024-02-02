@@ -45,16 +45,17 @@ mod tests;
 pub mod types;
 
 pub use pallet::*;
+use sp_runtime::traits::UniqueSaturatedInto;
 
-use crate::types::{Job, Policy};
+use crate::types::{Job, Policy, UserJob};
 
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::derive_impl;
-    use frame_support::pallet_prelude::*;
+    use frame_support::pallet_prelude::{ValueQuery, *};
     use frame_system::pallet_prelude::*;
     use frame_system::RawOrigin;
-    use mp_transactions::{InvokeTransaction, InvokeTransactionV1};
+    use mp_transactions::{InvokeTransaction, InvokeTransactionV1, UserTransaction};
 
     use super::*;
 
@@ -71,7 +72,14 @@ pub mod pallet {
 
     /// The pallet configuration trait
     #[pallet::config(with_default)]
-    pub trait Config: frame_system::Config + pallet_starknet::Config {}
+    pub trait Config: frame_system::Config + pallet_starknet::Config {
+        /// Maximum gas allowed for a job.
+        #[pallet::constant]
+        type MaxGas: Get<u64>;
+        /// Maximum offset allowed for a job. (in blocks)
+        #[pallet::constant]
+        type ValidityMaxOffset: Get<u64>;
+    }
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -80,6 +88,25 @@ pub mod pallet {
     #[pallet::unbounded]
     #[pallet::getter(fn job_by_id)]
     pub(super) type Jobs<T: Config> = StorageMap<_, Identity, u128, Job, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::unbounded]
+    #[pallet::getter(fn job_index_by_block_number)]
+    pub(super) type JobIndex<T: Config> = StorageMap<_, Identity, u64, u64, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::unbounded]
+    #[pallet::getter(fn is_job_executed)]
+    pub(super) type JobExecuted<T: Config> = StorageMap<_, Identity, u128, bool, OptionQuery>;
+
+    /// The pallet custom errors.
+    /// ERRORS
+    #[pallet::error]
+    pub enum Error<T> {
+        JobAlreadyExecuted,
+        InvalidJob,
+        InvalidJobFrequency,
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -102,7 +129,10 @@ pub mod pallet {
             });
 
             match pallet_starknet::Pallet::<T>::invoke(RawOrigin::None.into(), transaction) {
-                Ok(_) => {}
+                Ok(_) => {
+                    log::info!("Job triggered successfully");
+                    JobExecuted::<T>::insert(0, true);
+                }
                 Err(e) => {
                     log::error!("Error triggering job: {:?}", e);
                 }
@@ -114,15 +144,72 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Register a job to be triggered.
+        /// The job is stored in the storage and will be triggered when the conditions are met.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin` - The origin of the call.
+        /// * `job` - The job to be registered.
         #[pallet::call_index(0)]
         #[pallet::weight({0})]
-        pub fn set(origin: OriginFor<T>) -> DispatchResult {
-            // This ensures that the function can only be called via unsigned transaction.
+        pub fn register_job(origin: OriginFor<T>, user_job: UserJob) -> DispatchResult {
             ensure_none(origin)?;
+
+            let block_number =
+                UniqueSaturatedInto::<u64>::unique_saturated_into(frame_system::Pallet::<T>::block_number());
+
+            ensure!(user_job.policy.frequency >= 1, Error::<T>::InvalidJobFrequency);
+
+            let index = JobIndex::<T>::get(block_number);
+            let max_gas = T::MaxGas::get();
+
+            // Estimate the gas required for the jobs.
+            let user_transactions = user_job
+                .calls
+                .iter()
+                .map(|calldata| {
+                    let sequencer_address = pallet_starknet::Pallet::<T>::sequencer_address();
+                    let nonce = pallet_starknet::Pallet::<T>::nonce(sequencer_address);
+
+                    let transaction = InvokeTransaction::V1(InvokeTransactionV1 {
+                        max_fee: 1e18 as u128,
+                        signature: Default::default(),
+                        nonce: nonce.into(),
+                        sender_address: sequencer_address.into(),
+                        calldata: calldata.clone(),
+                        offset_version: false,
+                    });
+
+                    UserTransaction::Invoke(transaction)
+                })
+                .collect::<Vec<UserTransaction>>();
+
+            let estimates = pallet_starknet::Pallet::<T>::estimate_fee(user_transactions.clone())?;
+            let total_fee = estimates.iter().map(|x| x.0 + x.1).sum::<u64>();
+
+            let policy = Policy {
+                validity_start: block_number + user_job.policy.frequency - 1,
+                validity_end: block_number + user_job.policy.frequency + T::ValidityMaxOffset::get(),
+            };
+
+            let job = Job {
+                emission_block_number: block_number,
+                index,
+                max_gas,
+                actual_gas: total_fee,
+                calls: user_transactions,
+                policy,
+            };
+
+            let job_id = job.compute_id();
+            Jobs::<T>::insert(job_id, job);
+            JobIndex::<T>::set(block_number, index + 1);
 
             Ok(())
         }
     }
 }
 
+/// Internal Functions
 impl<T: Config> Pallet<T> {}
