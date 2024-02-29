@@ -34,6 +34,7 @@ pub use crate::with_serde::*;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd, Ord, Hash, Eq, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[repr(transparent)]
 pub struct Felt252Wrapper(pub FieldElement);
 
 impl Felt252Wrapper {
@@ -132,6 +133,13 @@ impl TryFrom<&[u8]> for Felt252Wrapper {
                 FromByteSliceError::OutOfRange => Err(Felt252WrapperError::OutOfRange),
             },
         }
+    }
+}
+
+/// [`EthAddress`] to [`Felt252Wrapper`].
+impl From<starknet_core::types::EthAddress> for Felt252Wrapper {
+    fn from(value: starknet_core::types::EthAddress) -> Self {
+        Self(FieldElement::from(value))
     }
 }
 

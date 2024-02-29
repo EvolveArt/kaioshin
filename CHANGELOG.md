@@ -2,6 +2,34 @@
 
 ## Next release
 
+- chore: update cairo-vm commit and update gas per op
+- refactor(rpc): use single arc instance of starknet rpc
+- build: remove patch on `ring-vrf` dependecy
+- ci: use `production` profile binary in the workflows
+- feat(rpc): support for pending state
+- test(rpc): disable state_diff tests
+- feat(rpc): add tests for estimateMessageFee RPC call
+- refacto: rename braavos call aggregator contract
+- fix: updating outdated links to external resources in documentation
+- feat(client/data-availability): implement custom error handling
+- fix: get_block_by_block_hash then default rather than error
+- feat(rpc): added `get_state_update` real values from DA db
+- feat: add transparent representation to `Felt252Wrapper`
+- feat(rpc/trace_api): add `trace_block_transaction`
+- chore(db): changed the way hashes are encoded
+- refacto: reusable Eth client config for settlement/DA/other tasks
+- ci: add gomu gomu no gatling perfomrance test
+- feat(runtime): moved StarkEvents from Substrate events to runtime storage
+
+## v0.7.0
+
+- chore: release v0.7.0
+- refacto: remove abusive `TryInto` impl
+- dev: optimize tx trace creation
+- dev: make Madara std compatible
+- dev: check that class exist before using it in BuildGenesisConfig
+- CI: fix taplo version
+- chore: add cache usage for `getEvents` and `getTransactionReceipt`
 - fix: cairo1 contracts should be identified by their sierra class hash
 - fix(cli): repair broken cli for da conf
 - feat(client): on `add_declare_transaction` store sierra contract classes in
@@ -272,3 +300,5 @@
 - branding: use new logo in the README
 - dev: Get the block status from the actual block in get_block_with_tx_hashes
 - fix: l1-l2 messaging
+- dev : clean contracts and compiled files
+- fix: add from_address in calldata of l1 message

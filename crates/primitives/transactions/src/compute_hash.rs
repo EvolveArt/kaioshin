@@ -10,6 +10,7 @@ use super::{
     HandleL1MessageTransaction, InvokeTransaction, InvokeTransactionV0, InvokeTransactionV1, Transaction,
     UserTransaction, SIMULATE_TX_VERSION_OFFSET,
 };
+use crate::UserOrL1HandlerTransaction;
 
 const DECLARE_PREFIX: &[u8] = b"declare";
 const DEPLOY_ACCOUNT_PREFIX: &[u8] = b"deploy_account";
@@ -262,7 +263,7 @@ impl ComputeTransactionHash for HandleL1MessageTransaction {
 impl ComputeTransactionHash for Transaction {
     fn compute_hash<H: HasherT>(&self, chain_id: Felt252Wrapper, offset_version: bool) -> Felt252Wrapper {
         match self {
-            Transaction::Declare(tx) => tx.compute_hash::<H>(chain_id, offset_version),
+            Transaction::Declare(tx, _contract_class) => tx.compute_hash::<H>(chain_id, offset_version),
             Transaction::DeployAccount(tx) => tx.compute_hash::<H>(chain_id, offset_version),
             Transaction::Invoke(tx) => tx.compute_hash::<H>(chain_id, offset_version),
             Transaction::L1Handler(tx) => tx.compute_hash::<H>(chain_id, offset_version),
@@ -276,6 +277,15 @@ impl ComputeTransactionHash for UserTransaction {
             UserTransaction::Declare(tx, _) => tx.compute_hash::<H>(chain_id, offset_version),
             UserTransaction::DeployAccount(tx) => tx.compute_hash::<H>(chain_id, offset_version),
             UserTransaction::Invoke(tx) => tx.compute_hash::<H>(chain_id, offset_version),
+        }
+    }
+}
+
+impl ComputeTransactionHash for UserOrL1HandlerTransaction {
+    fn compute_hash<H: HasherT>(&self, chain_id: Felt252Wrapper, offset_version: bool) -> Felt252Wrapper {
+        match self {
+            UserOrL1HandlerTransaction::User(tx) => tx.compute_hash::<H>(chain_id, offset_version),
+            UserOrL1HandlerTransaction::L1Handler(tx, _) => tx.compute_hash::<H>(chain_id, offset_version),
         }
     }
 }
