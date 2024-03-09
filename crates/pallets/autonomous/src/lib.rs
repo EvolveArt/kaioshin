@@ -99,6 +99,11 @@ pub mod pallet {
     #[pallet::getter(fn is_job_executed)]
     pub(super) type JobExecuted<T: Config> = StorageMap<_, Identity, u128, bool, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::unbounded]
+    #[pallet::getter(fn scheduled_jobs)]
+    pub(super) type ScheduledJobs<T: Config> = StorageMap<_, Identity, BlockNumberFor<T>, Vec<u128>, ValueQuery>;
+
     /// The pallet custom errors.
     /// ERRORS
     #[pallet::error]
@@ -115,26 +120,38 @@ pub mod pallet {
         /// Read the jobs that need to be triggered from the storage.
         /// Then it selects which ones to trigger based on the policy defined in the config.
         /// Finally we execute the jobs and update the storage accordingly.
-        fn on_idle(_: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-            let sequencer_address = pallet_starknet::Pallet::<T>::sequencer_address();
-            let nonce = pallet_starknet::Pallet::<T>::nonce(sequencer_address);
+        fn on_idle(now: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
+            let scheduled_jobs = ScheduledJobs::<T>::take(&now);
+            let jobs = scheduled_jobs.iter().filter_map(|job_id| Jobs::<T>::get(*job_id)).collect::<Vec<Job>>();
 
-            let transaction = InvokeTransaction::V1(InvokeTransactionV1 {
-                max_fee: 1e18 as u128,
-                signature: Default::default(),
-                nonce: nonce.into(),
-                sender_address: sequencer_address.into(),
-                calldata: Vec::new(),
-                offset_version: false,
-            });
+            for job in jobs.iter() {
+                let block_number = UniqueSaturatedInto::<u64>::unique_saturated_into(now);
 
-            match pallet_starknet::Pallet::<T>::invoke(RawOrigin::None.into(), transaction) {
-                Ok(_) => {
-                    log::info!("Job triggered successfully");
-                    JobExecuted::<T>::insert(0, true);
+                // Check if the job has already been executed.
+                if JobExecuted::<T>::contains_key(job.compute_id()) {
+                    continue;
                 }
-                Err(e) => {
-                    log::error!("Error triggering job: {:?}", e);
+
+                let transaction = job
+                    .calls
+                    .iter()
+                    .map(|call| match call {
+                        UserTransaction::Invoke(tx) => tx.clone(),
+                        _ => panic!("Invalid transaction type"),
+                    })
+                    .collect::<Vec<InvokeTransaction>>()
+                    .first()
+                    .unwrap()
+                    .clone();
+
+                match pallet_starknet::Pallet::<T>::invoke(RawOrigin::None.into(), transaction) {
+                    Ok(_) => {
+                        log::info!("Job triggered successfully");
+                        JobExecuted::<T>::insert(job.compute_id(), true);
+                    }
+                    Err(e) => {
+                        log::error!("Error triggering job: {:?}", e);
+                    }
                 }
             }
 
@@ -188,10 +205,10 @@ pub mod pallet {
             let estimates = pallet_starknet::Pallet::<T>::estimate_fee(user_transactions.clone())?;
             let total_fee = estimates.iter().map(|x| x.0 + x.1).sum::<u64>();
 
-            let policy = Policy {
-                validity_start: block_number + user_job.policy.frequency - 1,
-                validity_end: block_number + user_job.policy.frequency + T::ValidityMaxOffset::get(),
-            };
+            let validity_start = block_number + user_job.policy.frequency - 1;
+            let validity_end = block_number + user_job.policy.frequency + T::ValidityMaxOffset::get();
+
+            let policy = Policy { validity_start, validity_end };
 
             let job = Job {
                 emission_block_number: block_number,
@@ -205,6 +222,10 @@ pub mod pallet {
             let job_id = job.compute_id();
             Jobs::<T>::insert(job_id, job);
             JobIndex::<T>::set(block_number, index + 1);
+
+            let validity_start_as_number =
+                UniqueSaturatedInto::<BlockNumberFor<T>>::unique_saturated_into(validity_start);
+            ScheduledJobs::<T>::append(validity_start_as_number, job_id);
 
             Ok(())
         }
