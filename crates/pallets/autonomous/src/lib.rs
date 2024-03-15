@@ -49,6 +49,10 @@ use sp_runtime::traits::UniqueSaturatedInto;
 
 use crate::types::{Job, Policy, UserJob};
 
+/// A maximum number of jobs. When number of jobs reaches this number, no new jobs may be
+/// registered.
+pub const MAX_JOBS: usize = 50;
+
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::derive_impl;
@@ -87,7 +91,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::unbounded]
     #[pallet::getter(fn job_by_id)]
-    pub(super) type Jobs<T: Config> = StorageMap<_, Identity, u128, Job, OptionQuery>;
+    pub(super) type Jobs<T: Config> = StorageValue<_, Vec<(u128, Job)>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::unbounded]
@@ -99,11 +103,6 @@ pub mod pallet {
     #[pallet::getter(fn is_job_executed)]
     pub(super) type JobExecuted<T: Config> = StorageMap<_, Identity, u128, bool, OptionQuery>;
 
-    #[pallet::storage]
-    #[pallet::unbounded]
-    #[pallet::getter(fn scheduled_jobs)]
-    pub(super) type ScheduledJobs<T: Config> = StorageMap<_, Identity, BlockNumberFor<T>, Vec<u128>, ValueQuery>;
-
     /// The pallet custom errors.
     /// ERRORS
     #[pallet::error]
@@ -111,6 +110,8 @@ pub mod pallet {
         JobAlreadyExecuted,
         InvalidJob,
         InvalidJobFrequency,
+        JobsLimitReached,
+        JobAlreadyRegistered,
     }
 
     #[pallet::hooks]
@@ -121,14 +122,15 @@ pub mod pallet {
         /// Then it selects which ones to trigger based on the policy defined in the config.
         /// Finally we execute the jobs and update the storage accordingly.
         fn on_idle(now: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-            let scheduled_jobs = ScheduledJobs::<T>::take(&now);
-            let jobs = scheduled_jobs.iter().filter_map(|job_id| Jobs::<T>::get(*job_id)).collect::<Vec<Job>>();
+            // Get gas left
 
-            for job in jobs.iter() {
-                let block_number = UniqueSaturatedInto::<u64>::unique_saturated_into(now);
+            let all_jobs = Jobs::<T>::get();
+
+            for (job_id, job) in all_jobs {
+                let _block_number = UniqueSaturatedInto::<u64>::unique_saturated_into(now);
 
                 // Check if the job has already been executed.
-                if JobExecuted::<T>::contains_key(job.compute_id()) {
+                if JobExecuted::<T>::contains_key(job_id) {
                     continue;
                 }
 
@@ -140,19 +142,22 @@ pub mod pallet {
                         _ => panic!("Invalid transaction type"),
                     })
                     .collect::<Vec<InvokeTransaction>>()
-                    .first()
+                    .first() // We only support one transaction per job for now.
                     .unwrap()
                     .clone();
 
                 match pallet_starknet::Pallet::<T>::invoke(RawOrigin::None.into(), transaction) {
                     Ok(_) => {
                         log::info!("Job triggered successfully");
-                        JobExecuted::<T>::insert(job.compute_id(), true);
+                        JobExecuted::<T>::insert(job_id, true);
                     }
                     Err(e) => {
                         log::error!("Error triggering job: {:?}", e);
                     }
                 }
+
+                // If we have some gas left, we can continue to trigger the next job.
+                // Otherwise we stop and let the next block trigger the remaining jobs.
             }
 
             Weight::default()
@@ -172,6 +177,9 @@ pub mod pallet {
         #[pallet::weight({0})]
         pub fn register_job(origin: OriginFor<T>, user_job: UserJob) -> DispatchResult {
             ensure_none(origin)?;
+
+            let mut jobs = Jobs::<T>::get();
+            ensure!(jobs.len() < MAX_JOBS, Error::<T>::JobsLimitReached);
 
             let block_number =
                 UniqueSaturatedInto::<u64>::unique_saturated_into(frame_system::Pallet::<T>::block_number());
@@ -220,14 +228,22 @@ pub mod pallet {
             };
 
             let job_id = job.compute_id();
-            Jobs::<T>::insert(job_id, job);
-            JobIndex::<T>::set(block_number, index + 1);
+            // We don't want to add duplicate jobs, so we check whether the potential new
+            // job is already present in the list. Because the list is always ordered, we can
+            // leverage the binary search which makes this check O(log n).
+            match jobs.iter().map(|(id, _)| *id).collect::<Vec<u128>>().binary_search(&job_id) {
+                // If the search succeeds, the caller is already a member, so just return
+                Ok(_) => Err(Error::<T>::JobAlreadyRegistered.into()),
+                // If the search fails, the caller is not a member and we learned the index where
+                // they should be inserted
+                Err(job_index) => {
+                    jobs.insert(job_index, (job_id, job.clone()));
+                    Jobs::<T>::put(jobs);
+                    JobIndex::<T>::set(block_number, index + 1);
 
-            let validity_start_as_number =
-                UniqueSaturatedInto::<BlockNumberFor<T>>::unique_saturated_into(validity_start);
-            ScheduledJobs::<T>::append(validity_start_as_number, job_id);
-
-            Ok(())
+                    Ok(().into())
+                }
+            }
         }
     }
 }
