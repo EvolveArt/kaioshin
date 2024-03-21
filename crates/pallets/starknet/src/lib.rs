@@ -52,7 +52,7 @@ pub mod transaction_validation;
 pub mod types;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 #[macro_use]
 pub extern crate alloc;

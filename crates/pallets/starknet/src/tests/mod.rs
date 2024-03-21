@@ -31,7 +31,7 @@ mod send_message;
 mod sequencer_address;
 
 mod block;
-mod constants;
+pub mod constants;
 mod mock;
 mod utils;
 

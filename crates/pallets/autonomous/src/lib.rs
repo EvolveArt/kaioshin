@@ -52,6 +52,7 @@ use crate::types::{Job, Policy, UserJob};
 /// A maximum number of jobs. When number of jobs reaches this number, no new jobs may be
 /// registered.
 pub const MAX_JOBS: usize = 50;
+pub const MINIMUM_GAS: u64 = 100_000;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -156,8 +157,7 @@ pub mod pallet {
                     }
                 }
 
-                // If we have some gas left, we can continue to trigger the next job.
-                // Otherwise we stop and let the next block trigger the remaining jobs.
+                // We keep executing blocks till we reach the targeted block time.
             }
 
             Weight::default()
