@@ -224,7 +224,9 @@ pallet-starknet = { path = "crates/pallets/starknet", default-features = false, 
 pallet-starknet-runtime-api = { path = "crates/pallets/starknet/runtime_api", default-features = false, features = [
   "std",
 ] }
-pallet-autonomous = { path = "crates/pallets/autonomous", default-features = false }
+pallet-autonomous = { path = "crates/pallets/autonomous", default-features = false, features = [
+  "std",
+] }
 # Madara primtitives
 mp-genesis-config = { path = "crates/primitives/genesis-config", default-features = false }
 mp-digest-log = { path = "crates/primitives/digest-log", default-features = false }

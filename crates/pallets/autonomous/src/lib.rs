@@ -123,15 +123,13 @@ pub mod pallet {
         /// Then it selects which ones to trigger based on the policy defined in the config.
         /// Finally we execute the jobs and update the storage accordingly.
         fn on_idle(now: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-            // Get gas left
-
             let all_jobs = Jobs::<T>::get();
 
             for (job_id, job) in all_jobs {
                 let _block_number = UniqueSaturatedInto::<u64>::unique_saturated_into(now);
 
                 // Check if the job has already been executed.
-                if JobExecuted::<T>::contains_key(job_id) {
+                if JobExecuted::<T>::get(job_id).unwrap_or(false) {
                     continue;
                 }
 
@@ -178,13 +176,14 @@ pub mod pallet {
         pub fn register_job(origin: OriginFor<T>, user_job: UserJob) -> DispatchResult {
             ensure_none(origin)?;
 
+            ensure!(user_job.calls.len() > 0, Error::<T>::InvalidJob);
+            ensure!(user_job.policy.frequency >= 1, Error::<T>::InvalidJobFrequency);
+
             let mut jobs = Jobs::<T>::get();
             ensure!(jobs.len() < MAX_JOBS, Error::<T>::JobsLimitReached);
 
             let block_number =
                 UniqueSaturatedInto::<u64>::unique_saturated_into(frame_system::Pallet::<T>::block_number());
-
-            ensure!(user_job.policy.frequency >= 1, Error::<T>::InvalidJobFrequency);
 
             let index = JobIndex::<T>::get(block_number);
             let max_gas = T::MaxGas::get();
@@ -199,7 +198,7 @@ pub mod pallet {
 
                     let transaction = InvokeTransaction::V1(InvokeTransactionV1 {
                         max_fee: 1e18 as u128,
-                        signature: Default::default(),
+                        signature: vec![],
                         nonce: nonce.into(),
                         sender_address: sequencer_address.into(),
                         calldata: calldata.clone(),
@@ -240,6 +239,7 @@ pub mod pallet {
                     jobs.insert(job_index, (job_id, job.clone()));
                     Jobs::<T>::put(jobs);
                     JobIndex::<T>::set(block_number, index + 1);
+                    JobExecuted::<T>::insert(job_id, false);
 
                     Ok(().into())
                 }
@@ -249,4 +249,8 @@ pub mod pallet {
 }
 
 /// Internal Functions
-impl<T: Config> Pallet<T> {}
+impl<T: Config> Pallet<T> {
+    pub fn jobs() -> Vec<(u128, Job)> {
+        Jobs::<T>::get()
+    }
+}

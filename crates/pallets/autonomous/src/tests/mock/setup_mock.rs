@@ -15,11 +15,19 @@ macro_rules! autonomous_mock_runtime {
 			use {crate as pallet_autonomous, frame_system as system};
 			use pallet_starknet::{SeqAddrUpdate, SequencerAddress};
 			use frame_support::traits::Hooks;
-			use mp_sequencer_address::DEFAULT_SEQUENCER_ADDRESS;
             use mp_felt::Felt252Wrapper;
 			use starknet_api::api_core::{PatriciaKey, ContractAddress};
 			use starknet_api::hash::StarkFelt;
 			use mp_fee::ResourcePrice;
+			use frame_support::weights::constants::WEIGHT_REF_TIME_PER_SECOND;
+			use frame_support::pallet_prelude::Weight;
+
+			parameter_types! {
+				pub BlockWeights: frame_system::limits::BlockWeights =
+					frame_system::limits::BlockWeights::simple_max(
+						Weight::from_parts(2u64 * WEIGHT_REF_TIME_PER_SECOND, u64::MAX),
+					);
+			}
 
 
 			type Block = frame_system::mocking::MockBlock<MockRuntime>;
@@ -105,22 +113,34 @@ macro_rules! autonomous_mock_runtime {
 			/// The function will repeatedly create and run blocks until the block number is equal to `n`.
 			/// # Arguments
 			/// * `n` - The block number to run to.
-			pub(crate) fn run_to_block(n: u64) {
-				for b in System::block_number()..=n {
+			pub(crate) fn run_to_block(n: u64, on_idle: bool) {
+				let current_block = System::block_number();
+				assert!(n > current_block);
+				while System::block_number() < n {
 					SeqAddrUpdate::<MockRuntime>::put(true);
-					System::set_block_number(b);
+					System::set_block_number(System::block_number());
 					Timestamp::set_timestamp(System::block_number() * 6_000);
-					Starknet::on_finalize(b);
+					Starknet::on_finalize(System::block_number());
+
+					if on_idle {
+						Autonomous::on_idle(System::block_number(), BlockWeights::get().max_block);
+					}
 				}
 			}
 
 			/// Setup initial block and sequencer address for unit tests.
 			pub(crate) fn basic_test_setup(n: u64) {
 				SeqAddrUpdate::<MockRuntime>::put(true);
-				let default_addr = ContractAddress(PatriciaKey(StarkFelt::new(DEFAULT_SEQUENCER_ADDRESS).unwrap()));
+				let default_addr = ContractAddress(PatriciaKey(StarkFelt::from(1u128)));
 				SequencerAddress::<MockRuntime>::put(default_addr);
 				System::set_block_number(0);
-				run_to_block(n);
+				run_to_block(n, false);
+			}
+
+
+			pub(crate) fn next_block(on_idle: bool) {
+				let current = System::block_number();
+				run_to_block(current + 1, on_idle);
 			}
 		}
     };
