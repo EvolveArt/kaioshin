@@ -118,7 +118,7 @@ macro_rules! autonomous_mock_runtime {
 				assert!(n > current_block);
 				while System::block_number() < n {
 					SeqAddrUpdate::<MockRuntime>::put(true);
-					System::set_block_number(System::block_number());
+					System::set_block_number(System::block_number() + 1);
 					Timestamp::set_timestamp(System::block_number() * 6_000);
 					Starknet::on_finalize(System::block_number());
 

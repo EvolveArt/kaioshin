@@ -9,7 +9,7 @@ pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"seqaddr0";
 
 /// Default value in case the sequencer address is not set.
 pub const DEFAULT_SEQUENCER_ADDRESS: [u8; 32] =
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 222, 173];
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
 
 /// The storage key for the sequencer address value.
 pub const SEQ_ADDR_STORAGE_KEY: &[u8] = b"starknet::seq_addr";
