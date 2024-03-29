@@ -113,50 +113,52 @@ pub mod pallet {
         InvalidJobFrequency,
         JobsLimitReached,
         JobAlreadyRegistered,
+        JobGasLimitExceeded,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        /// If we have some spare time left, the `on_idle` hook will trigger the jobs
-        /// that need/can be triggered.
-        /// Read the jobs that need to be triggered from the storage.
-        /// Then it selects which ones to trigger based on the policy defined in the config.
-        /// Finally we execute the jobs and update the storage accordingly.
         fn on_idle(now: BlockNumberFor<T>, _remaining_weight: Weight) -> Weight {
-            let all_jobs = Jobs::<T>::get();
+            let mut all_jobs = Jobs::<T>::get();
+            let block_number = UniqueSaturatedInto::<u64>::unique_saturated_into(now);
 
-            for (job_id, job) in all_jobs {
-                let _block_number = UniqueSaturatedInto::<u64>::unique_saturated_into(now);
-
-                // Check if the job has already been executed.
-                if JobExecuted::<T>::get(job_id).unwrap_or(false) {
-                    continue;
+            all_jobs.iter_mut().for_each(|(job_id, job)| {
+                // Skip if the job doesn't meet the timing constraints or has already been executed.
+                if block_number < job.policy.validity_start
+                    || block_number > job.policy.validity_end
+                    || JobExecuted::<T>::get(*job_id).unwrap_or(false)
+                {
+                    return;
                 }
 
                 let transaction = job
                     .calls
                     .iter()
-                    .map(|call| match call {
-                        UserTransaction::Invoke(tx) => tx.clone(),
-                        _ => panic!("Invalid transaction type"),
+                    .find_map(|call| {
+                        if let UserTransaction::Invoke(tx) = call {
+                            Some(tx.clone()) // Clone here is necessary, but it's just one transaction rather than the whole jobs list.
+                        } else {
+                            None
+                        }
                     })
-                    .collect::<Vec<InvokeTransaction>>()
-                    .first() // We only support one transaction per job for now.
-                    .unwrap()
-                    .clone();
+                    .expect(
+                        "Invalid transaction type; this should be unreachable if jobs are validated upon registration.",
+                    );
 
                 match pallet_starknet::Pallet::<T>::invoke(RawOrigin::None.into(), transaction) {
                     Ok(_) => {
                         log::info!("Job triggered successfully");
-                        JobExecuted::<T>::insert(job_id, true);
+                        JobExecuted::<T>::insert(*job_id, true);
                     }
                     Err(e) => {
                         log::error!("Error triggering job: {:?}", e);
                     }
                 }
+            });
 
-                // We keep executing blocks till we reach the targeted block time.
-            }
+            // Remove executed jobs from the list to avoid processing them again.
+            all_jobs.retain(|(job_id, _)| !JobExecuted::<T>::get(job_id).unwrap_or(false));
+            Jobs::<T>::put(all_jobs);
 
             Weight::default()
         }
@@ -176,7 +178,7 @@ pub mod pallet {
         pub fn register_job(origin: OriginFor<T>, user_job: UserJob) -> DispatchResult {
             ensure_none(origin)?;
 
-            ensure!(user_job.calls.len() > 0, Error::<T>::InvalidJob);
+            ensure!(!user_job.calls.is_empty(), Error::<T>::InvalidJob);
             ensure!(user_job.policy.frequency >= 1, Error::<T>::InvalidJobFrequency);
 
             let mut jobs = Jobs::<T>::get();
@@ -185,7 +187,7 @@ pub mod pallet {
             let block_number =
                 UniqueSaturatedInto::<u64>::unique_saturated_into(frame_system::Pallet::<T>::block_number());
 
-            let index = JobIndex::<T>::get(block_number);
+            let index = JobIndex::<T>::get(block_number) + 1;
             let max_gas = T::MaxGas::get();
 
             // Estimate the gas required for the jobs.
@@ -198,7 +200,7 @@ pub mod pallet {
 
                     let transaction = InvokeTransaction::V1(InvokeTransactionV1 {
                         max_fee: 1e18 as u128,
-                        signature: vec![],
+                        signature: vec![], // no signature as the sequencer has a NoValidateAccount
                         nonce: nonce.into(),
                         sender_address: sequencer_address.into(),
                         calldata: calldata.clone(),
@@ -211,6 +213,7 @@ pub mod pallet {
 
             let estimates = pallet_starknet::Pallet::<T>::estimate_fee(user_transactions.clone())?;
             let total_fee = estimates.iter().map(|x| x.0 + x.1).sum::<u64>();
+            ensure!(total_fee <= max_gas, Error::<T>::JobGasLimitExceeded);
 
             let validity_start = block_number + user_job.policy.frequency - 1;
             let validity_end = block_number + user_job.policy.frequency + T::ValidityMaxOffset::get();
@@ -241,7 +244,7 @@ pub mod pallet {
                     JobIndex::<T>::set(block_number, index + 1);
                     JobExecuted::<T>::insert(job_id, false);
 
-                    Ok(().into())
+                    Ok(())
                 }
             }
         }

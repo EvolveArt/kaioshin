@@ -51,13 +51,15 @@ pub struct UserJob {
     pub policy: UserPolicy,
 }
 
+pub const GAS_RATIO_SCALE: f64 = 100000.0;
+
 impl Job {
     /// Compute the id of the job.
     /// Defines the priority of the job. (higher id means higher priority)
     pub fn compute_id(&self) -> u128 {
         let denom = if self.max_gas > 0 { self.max_gas } else { 1 };
-        let gas_ratio = self.actual_gas / denom;
+        let gas_ratio = (self.actual_gas as f64 / denom as f64) * GAS_RATIO_SCALE;
 
-        (gas_ratio + self.emission_block_number + self.index).into()
+        (gas_ratio as u64 + self.emission_block_number).into()
     }
 }

@@ -1,12 +1,13 @@
 use frame_support::{assert_err, assert_ok};
 use mp_felt::Felt252Wrapper;
 use pallet_starknet::Error as StarknetError;
+use sp_core::Get;
 
 use super::mock::default_mock::*;
 use super::mock::*;
 use crate::tests::get_dummy_user_job;
 use crate::types::{UserJob, UserPolicy};
-use crate::{Config, Error};
+use crate::{Config, Error, MAX_JOBS};
 
 #[test]
 fn given_invalid_user_job_registration_fails() {
@@ -39,5 +40,58 @@ fn given_valid_user_job_registration_works() {
         let user_job = get_dummy_user_job();
 
         assert_ok!(Autonomous::register_job(none_origin, user_job));
+
+        let all_jobs = Autonomous::jobs();
+        let (job_id, job) = all_jobs.get(0).unwrap();
+
+        assert_eq!(job.emission_block_number, 2);
+        assert_eq!(job.index, 1);
+
+        let max_gas: u64 = <setup_mock::default_mock::MockRuntime as Config>::MaxGas::get();
+        assert_eq!(job.max_gas, max_gas);
+
+        let validity_max_offset: u64 = <setup_mock::default_mock::MockRuntime as Config>::ValidityMaxOffset::get();
+        assert_eq!(job.policy.validity_start, 11);
+        assert_eq!(job.policy.validity_end, 12 + validity_max_offset);
+
+        assert!(job.actual_gas > 0);
+        assert_eq!(job.calls.len(), 1);
+
+        let is_executed = Autonomous::is_job_executed(job_id).unwrap();
+        assert_eq!(is_executed, false);
+
+        let job_index = Autonomous::job_index_by_block_number(2);
+        assert_eq!(job_index, 0);
+    })
+}
+
+#[test]
+fn fail_to_register_more_than_max_jobs() {
+    new_test_ext::<MockRuntime>().execute_with(|| {
+        basic_test_setup(2);
+
+        let none_origin = RuntimeOrigin::none();
+
+        let user_job = get_dummy_user_job();
+
+        for _ in 0..MAX_JOBS {
+            assert_ok!(Autonomous::register_job(none_origin.clone(), user_job.clone()));
+        }
+
+        assert_err!(Autonomous::register_job(none_origin, user_job), Error::<MockRuntime>::JobsLimitReached);
+    })
+}
+
+#[test]
+fn fail_to_register_job_twice() {
+    new_test_ext::<MockRuntime>().execute_with(|| {
+        basic_test_setup(2);
+
+        let none_origin = RuntimeOrigin::none();
+
+        let user_job = get_dummy_user_job();
+
+        assert_ok!(Autonomous::register_job(none_origin.clone(), user_job.clone()));
+        assert_err!(Autonomous::register_job(none_origin, user_job), Error::<MockRuntime>::JobAlreadyRegistered);
     })
 }
