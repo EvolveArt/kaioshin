@@ -6180,6 +6180,7 @@ dependencies = [
  "mp-transactions",
  "pallet-aura",
  "pallet-autonomous",
+ "pallet-balances",
  "pallet-grandpa",
  "pallet-starknet",
  "pallet-starknet-runtime-api",
@@ -7669,6 +7670,21 @@ dependencies = [
  "starknet-ff 0.3.5 (git+https://github.com/xJonathanLEI/starknet-rs.git?rev=64ebc36)",
  "starknet_api",
  "test-case",
+]
+
+[[package]]
+name = "pallet-balances"
+version = "4.0.0-dev"
+source = "git+https://github.com/massalabs/polkadot-sdk?branch=release-polkadot-v1.3.0-std#a41673f8aa3f24d7ed8fb1f246a97551eca58837"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime 24.0.0 (git+https://github.com/massalabs/polkadot-sdk?branch=release-polkadot-v1.3.0-std)",
+ "sp-std 8.0.0 (git+https://github.com/massalabs/polkadot-sdk?branch=release-polkadot-v1.3.0-std)",
 ]
 
 [[package]]

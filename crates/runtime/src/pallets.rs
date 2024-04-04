@@ -101,7 +101,7 @@ impl frame_system::Config for Runtime {
     /// What to do if an account is fully reaped from the system.
     type OnKilledAccount = ();
     /// The data to be stored in an account.
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     /// Weight information for the extrinsics of this pallet.
     type SystemWeightInfo = ();
     /// This is used as an identifier of the chain. 42 is the generic substrate prefix.
@@ -143,6 +143,31 @@ impl pallet_grandpa::Config for Runtime {
 
     type KeyOwnerProof = sp_core::Void;
     type EquivocationReportSystem = ();
+}
+
+/// Provides interaction with balances and accounts.
+/// TODO: Comment and explain the rationale behind the configuration items.
+impl pallet_balances::Config for Runtime {
+    type MaxLocks = ConstU32<50>;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
+    type Balance = Balance;
+    /// The ubiquitous event type.
+    type RuntimeEvent = RuntimeEvent;
+    type DustRemoval = ();
+    type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
+    type AccountStore = System;
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type MaxHolds = ();
+
+    /// The overarching hold reason.
+    type RuntimeHoldReason = ();
+
+    /// The overarching freeze reason.
+    type RuntimeFreezeReason = ();
 }
 
 /// --------------------------------------

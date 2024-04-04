@@ -1,12 +1,7 @@
 //! A Substrate pallet implementation for Autonomous Execution of Starknet Contracts.
 //! This pallet is tightly coupled to the Starknet pallet.
-//!
-/// You can find a thorough explanation of the design 
+/// You can find a thorough explanation of the design
 /// [here](https://github.com/keep-starknet-strange/madara/discussions/1309)
-
-// Ensure we're `no_std` when compiling for Wasm.
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::large_enum_variant)]
 
 /// Autonomous pallet.
 /// Definition of the pallet's runtime storage items, events, errors, and dispatchable
@@ -151,7 +146,7 @@ pub mod pallet {
         #[pallet::call_index(0)]
         #[pallet::weight({0})]
         pub fn register_job(origin: OriginFor<T>, user_job: UserJob) -> DispatchResult {
-            ensure_none(origin)?;
+            ensure_signed(origin)?;
 
             ensure!(!user_job.calls.is_empty(), Error::<T>::InvalidJob);
             ensure!(user_job.policy.frequency >= 1, Error::<T>::InvalidJobFrequency);
@@ -197,7 +192,6 @@ pub mod pallet {
 
             let job = Job {
                 emission_block_number: block_number,
-                index,
                 max_gas,
                 actual_gas: total_fee,
                 calls: user_transactions,

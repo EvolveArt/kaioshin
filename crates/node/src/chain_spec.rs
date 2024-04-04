@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use madara_runtime::{AuraConfig, GrandpaConfig, RuntimeGenesisConfig, SealingMode, SystemConfig, WASM_BINARY};
+use madara_runtime::{
+    AccountId, AuraConfig, BalancesConfig, GrandpaConfig, RuntimeGenesisConfig, SealingMode, Signature, SystemConfig,
+    WASM_BINARY,
+};
 use mp_felt::Felt252Wrapper;
 use pallet_starknet::genesis_loader::{GenesisData, GenesisLoader, HexFelt};
 use sc_service::{BasePath, ChainType};
@@ -8,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_core::storage::Storage;
-use sp_core::{Pair, Public};
+use sp_core::{sr25519, Pair, Public};
+use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_state_machine::BasicExternalities;
 
 use crate::constants::DEV_CHAIN_ID;
@@ -77,6 +81,20 @@ pub fn development_config(sealing: SealingMode, base_path: BasePath) -> Result<D
                     wasm_binary,
                     // Initial PoA authorities
                     vec![authority_keys_from_seed("Alice")],
+                    vec![
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        get_account_id_from_seed::<sr25519::Public>("Bob"),
+                        get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                        get_account_id_from_seed::<sr25519::Public>("Dave"),
+                        get_account_id_from_seed::<sr25519::Public>("Eve"),
+                        get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                        get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                        get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                        get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+                        get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+                        get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+                        get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                    ],
                     true,
                 ),
                 sealing: sealing.clone(),
@@ -117,6 +135,16 @@ pub fn print_development_accounts(genesis_loader: &GenesisLoader) {
     log::info!("🧪 CAIRO 1 with address: {cairo_1_no_validate_account_address:#x} and no pk");
 }
 
+type AccountPublic = <Signature as Verify>::Signer;
+
+/// Generate an account ID from seed.
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
 pub fn local_testnet_config(base_path: BasePath, chain_id: &str) -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
@@ -135,6 +163,21 @@ pub fn local_testnet_config(base_path: BasePath, chain_id: &str) -> Result<Chain
                 // Initial PoA authorities
                 // Intended to be only 2
                 vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
+                // Pre-funded accounts
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                ],
                 true,
             )
         },
@@ -167,6 +210,7 @@ fn testnet_genesis(
     genesis_loader: GenesisLoader,
     wasm_binary: &[u8],
     initial_authorities: Vec<(AuraId, GrandpaId)>,
+    endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
 ) -> RuntimeGenesisConfig {
     let starknet_genesis_config: madara_runtime::pallet_starknet::GenesisConfig<_> = genesis_loader.into();
@@ -176,6 +220,11 @@ fn testnet_genesis(
             // Add Wasm runtime to storage.
             code: wasm_binary.to_vec(),
             _config: Default::default(),
+        },
+        // Provides interaction with balances and accounts
+        balances: BalancesConfig {
+            // Configure endowed accounts with initial balance of 1 << 60.
+            balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
         },
         // Authority-based consensus protocol used for block production
         aura: AuraConfig { authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect() },

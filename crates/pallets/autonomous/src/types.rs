@@ -1,5 +1,6 @@
 use mp_felt::Felt252Wrapper;
 use mp_transactions::UserTransaction;
+use parity_scale_codec::Encode;
 
 pub type Call = Vec<Felt252Wrapper>;
 
@@ -28,8 +29,6 @@ pub struct UserPolicy {
 pub struct Job {
     /// The block number at which the job is emitted.
     pub emission_block_number: u64,
-    /// Index of the job. Used to differentiate jobs emitted at the same block.
-    pub index: u64,
     /// Maximum gas to be used for the job.
     pub max_gas: u64,
     /// Actual gas used for the job.
@@ -59,7 +58,10 @@ impl Job {
     pub fn compute_id(&self) -> u128 {
         let denom = if self.max_gas > 0 { self.max_gas } else { 1 };
         let gas_ratio = (self.actual_gas as f64 / denom as f64) * GAS_RATIO_SCALE;
+        let encoded = self.encode();
+        let call_hash: u128 = u128::from_le_bytes(sp_io::hashing::twox_128(&encoded));
 
-        (gas_ratio as u64 + self.emission_block_number).into()
+        let id = gas_ratio as u128 + self.emission_block_number as u128 + call_hash;
+        id
     }
 }

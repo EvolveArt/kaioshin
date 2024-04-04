@@ -29,7 +29,6 @@
 //! 7. Dispatchable Functions: The Pallet struct implements several dispatchable functions (ping,
 //! invoke, ...), which allow users to interact with the pallet and invoke state changes. These
 //! functions are annotated with weight and return a DispatchResult.
-// Ensure we're `no_std` when compiling for Wasm.
 #![allow(clippy::large_enum_variant)]
 
 /// Starknet pallet.

@@ -52,6 +52,7 @@ frame-system-benchmarking = { workspace = true, optional = true }
 pallet-starknet = { workspace = true }
 pallet-autonomous = { workspace = true }
 pallet-starknet-runtime-api = { workspace = true }
+pallet-balances = { workspace = true }
 
 # Madara Primitives
 mp-block = { workspace = true }
@@ -89,6 +90,7 @@ std = [
   "pallet-aura/std",
   "pallet-grandpa/std",
   "pallet-timestamp/std",
+  "pallet-balances/std",
   # Substrate primitives dependencies
   "sp-api/std",
   "sp-block-builder/std",
@@ -115,6 +117,7 @@ try-runtime = [
   "frame-support/try-runtime",
   "pallet-aura/try-runtime",
   "pallet-grandpa/try-runtime",
+  "pallet-balances/try-runtime",
   # Madara pallets
   "pallet-starknet/try-runtime",
 ]
@@ -129,6 +132,7 @@ runtime-benchmarks = [
   "pallet-grandpa/runtime-benchmarks",
   "pallet-timestamp/runtime-benchmarks",
   "sp-runtime/runtime-benchmarks",
+  "pallet-balances/runtime-benchmarks",
   # Madara pallets
   "pallet-starknet/runtime-benchmarks",
   "pallet-autonomous/runtime-benchmarks",

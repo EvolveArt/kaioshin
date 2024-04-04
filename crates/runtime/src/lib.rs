@@ -57,6 +57,7 @@ use starknet_api::state::StorageKey;
 use starknet_api::transaction::{Calldata, Event as StarknetEvent, Fee, MessageToL1, TransactionHash};
 /// Import the types.
 pub use types::*;
+pub use {pallet_autonomous, pallet_balances};
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -64,8 +65,10 @@ construct_runtime!(
         System: frame_system,
         Timestamp: pallet_timestamp,
         Aura: pallet_aura,
+        Balances: pallet_balances,
         Grandpa: pallet_grandpa,
         Starknet: pallet_starknet,
+        Autonomous: pallet_autonomous,
     }
 );
 

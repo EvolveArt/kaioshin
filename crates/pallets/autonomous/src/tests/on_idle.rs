@@ -1,6 +1,7 @@
 use frame_support::pallet_prelude::Weight;
 use frame_support::traits::OnIdle;
 use frame_support::{assert_err, assert_ok};
+use frame_system::offchain::Account;
 use sp_core::Get;
 
 use super::mock::default_mock::*;
@@ -26,11 +27,11 @@ fn given_one_job_it_is_executed_on_time() {
     new_test_ext::<MockRuntime>().execute_with(|| {
         basic_test_setup(2);
 
-        let none_origin = RuntimeOrigin::none();
+        let signed_origin = RuntimeOrigin::signed(1);
 
         let user_job = get_dummy_user_job();
 
-        assert_ok!(Autonomous::register_job(none_origin, user_job));
+        assert_ok!(Autonomous::register_job(signed_origin, user_job));
 
         let jobs = Autonomous::jobs();
         let job = jobs.get(0).unwrap();
@@ -50,11 +51,11 @@ fn given_one_job_it_is_removed_after_execution() {
     new_test_ext::<MockRuntime>().execute_with(|| {
         basic_test_setup(2);
 
-        let none_origin = RuntimeOrigin::none();
+        let signed_origin = RuntimeOrigin::signed(1);
 
         let user_job = get_dummy_user_job();
 
-        assert_ok!(Autonomous::register_job(none_origin, user_job));
+        assert_ok!(Autonomous::register_job(signed_origin, user_job));
 
         assert_eq!(Autonomous::jobs().len(), 1);
 
@@ -71,11 +72,11 @@ fn given_one_job_it_is_not_executed_before_validity_start() {
     new_test_ext::<MockRuntime>().execute_with(|| {
         basic_test_setup(2);
 
-        let none_origin = RuntimeOrigin::none();
+        let signed_origin = RuntimeOrigin::signed(1);
 
         let user_job = get_dummy_user_job();
 
-        assert_ok!(Autonomous::register_job(none_origin, user_job));
+        assert_ok!(Autonomous::register_job(signed_origin, user_job));
 
         assert_eq!(Autonomous::jobs().len(), 1);
 
@@ -96,11 +97,11 @@ fn given_one_job_it_is_not_executed_after_validity_end() {
     new_test_ext::<MockRuntime>().execute_with(|| {
         basic_test_setup(2);
 
-        let none_origin = RuntimeOrigin::none();
+        let signed_origin = RuntimeOrigin::signed(1);
 
         let user_job = get_dummy_user_job();
 
-        assert_ok!(Autonomous::register_job(none_origin, user_job));
+        assert_ok!(Autonomous::register_job(signed_origin, user_job));
 
         assert_eq!(Autonomous::jobs().len(), 1);
 

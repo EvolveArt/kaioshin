@@ -216,6 +216,7 @@ prometheus-endpoint = { package = "substrate-prometheus-endpoint", version = "0.
 pallet-aura = { default-features = true, git = "https://github.com/massalabs/polkadot-sdk", branch = "release-polkadot-v1.3.0-std" }
 pallet-grandpa = { default-features = true, git = "https://github.com/massalabs/polkadot-sdk", branch = "release-polkadot-v1.3.0-std" }
 pallet-timestamp = { default-features = true, git = "https://github.com/massalabs/polkadot-sdk", branch = "release-polkadot-v1.3.0-std" }
+pallet-balances = { default-features = true, git = "https://github.com/massalabs/polkadot-sdk", branch = "release-polkadot-v1.3.0-std" }
 
 # Madara pallets
 pallet-starknet = { path = "crates/pallets/starknet", default-features = false, features = [
