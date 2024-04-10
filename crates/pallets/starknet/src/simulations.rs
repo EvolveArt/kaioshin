@@ -45,10 +45,9 @@ impl<T: Config> Pallet<T> {
                         log::error!("Transaction execution failed during fee estimation: {e}");
                         Err(Error::<T>::TransactionExecutionFailed)
                     }
-                    Ok(execution_info) => {
+                    (Ok(execution_info), _) => {
                         // log::error!(
                         //     "Transaction execution reverted during fee estimation: {}",
-                        //     // Safe due to the `match` branch order
                         //     execution_info.revert_error.unwrap()
                         // );
                         println!(
