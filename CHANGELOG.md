@@ -2,6 +2,12 @@
 
 ## Next release
 
+- chore: rebase on latest blockifier
+- refactoring : Removed Redundant logs in madara
+- fix: transaction receipt fails for txs in the middle of a block
+- chore: add makefile for developer experience improvements and cleanup
+- fix: fix cargo-lint issues
+- feat: added chain-id to the GenesisConfig in pallet-starknet
 - fix(node): fix genesis hash inconsistency
 - feat (pallet): add tests for storage reversal on transaction revert
 - feat: add prometheus metrics for mapping worker
@@ -29,6 +35,7 @@
 - ci: add gomu gomu no gatling perfomrance test
 - feat(runtime): moved StarkEvents from Substrate
 - feat(rpc/trace_api): add `trace_transaction`
+- fix(docker): fix dockerfile for `madara-node`
 
 ## v0.7.0
 
@@ -312,3 +319,4 @@
 - fix: l1-l2 messaging
 - dev : clean contracts and compiled files
 - fix: add from_address in calldata of l1 message
+- test: add starkgate related testcase
